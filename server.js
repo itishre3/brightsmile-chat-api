@@ -1,16 +1,16 @@
 const express = require('express');
 const cors = require('cors');
-const Anthropic = require('@anthropic-ai/sdk');
+const OpenAI = require('openai');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const anthropic = new Anthropic({ 
-  apiKey: process.env.ANTHROPIC_API_KEY 
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY 
 });
 
-// Health check endpoint (required by DigitalOcean)
+// Health check endpoint
 app.get('/', (req, res) => {
   res.json({ status: 'ok', service: 'BrightSmile Chat API' });
 });
@@ -18,11 +18,14 @@ app.get('/', (req, res) => {
 app.post('/api/chat', async (req, res) => {
   try {
     const { messages } = req.body;
-    
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
       max_tokens: 1024,
-      system: `You are a helpful dental practice assistant for BrightSmile Dental. 
+      messages: [
+        {
+          role: 'system',
+          content: `You are a helpful dental practice assistant for BrightSmile Dental. 
 
 Key information:
 - Location: 123 Main St, Los Angeles, CA 90210
@@ -32,26 +35,17 @@ Key information:
 - Services: General dentistry, cosmetic procedures, orthodontics, implants
 - Typical prices: Cleaning $120, Exam $80, Whitening $450, Crown $1200
 
-Be friendly, concise, and helpful. Encourage booking appointments. If unsure, suggest calling the office.`,
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.content
-      })),
-      stream: true
+Be friendly, concise, and helpful. Encourage booking appointments. If unsure, suggest calling the office.`
+        },
+        ...messages.map(m => ({
+          role: m.role,
+          content: m.content
+        }))
+      ]
     });
 
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    for await (const event of response) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
-      }
-    }
-    
-    res.write('data: [DONE]\n\n');
-    res.end();
+    const reply = response.choices[0].message.content;
+    res.json({ reply });
 
   } catch (error) {
     console.error('Chat error:', error);
@@ -59,7 +53,7 @@ Be friendly, concise, and helpful. Encourage booking appointments. If unsure, su
   }
 });
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`Chat API running on port ${PORT}`);
 });
