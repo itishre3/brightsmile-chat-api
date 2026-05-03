@@ -9,9 +9,10 @@
   "scripts": {
     "start": "node server.js"
   },
-"dependencies": {
-  "express": "...",
-  "cors": "...",
-  "openai": "^4.0.0"   // ← replace @anthropic-ai/sdk with this
-}
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "openai": "^4.0.0",
+    "nodemailer": "^6.9.0"
+  }
 }
